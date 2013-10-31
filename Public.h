@@ -10,6 +10,8 @@
 #define CLOCKS_PER_SEC (2.6 * 1000000000)
 #define _CRT_SECURE_NO_WARNINGS
 
+#include <typeinfo>
+
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -27,6 +29,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include "ipp.h"
+
 #pragma comment(lib,"ippi.lib")
 #pragma comment(lib,"ippm.lib")
 #pragma comment(lib,"ippcore.lib")
@@ -36,14 +39,12 @@
 #include "opencv/highgui.h"
 #include "opencv/cv.h"
 
-#pragma comment(lib,"cv.lib")
 #pragma comment(lib,"cxcore.lib")
 #pragma comment(lib,"highgui.lib")
 #pragma comment(lib,"cvhaartraining.lib")
 #pragma comment(lib,"ml.lib")
 #pragma comment(lib,"cvaux.lib")
 #pragma comment(lib,"cxts.lib")
-
 
 #include "omp.h"
 #include "timer.h"

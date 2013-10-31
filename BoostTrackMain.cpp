@@ -5,7 +5,9 @@
 #include <string.h>
 #include <algorithm>
 
-#define NUM_TRACKERS 1
+#include "opencv2/highgui.hpp"
+
+#define NUM_TRACKERS 3
 #define NUM_SEL_FEATS 50
 #define NUM_FEATS 250
 
@@ -52,7 +54,7 @@ bool initFace(Matrixu *frame, int *x, int *y, int *w, int *h) {
 }
 
 
-vector<Matrixu> loadFromMov(const char *filepath)
+vector<Matrixu> loadFromMov(const string& filepath)
 {
     //filepath should be something like /home/sid/Downloads/a1.mov;
 	vector<Matrixu> res;
@@ -60,6 +62,10 @@ vector<Matrixu> loadFromMov(const char *filepath)
     Matrixu frameu;
 
 	cv::VideoCapture cap(filepath);
+	if(!cap.isOpened()) {
+		throw "Cannot open file."; // check if we succeeded
+	}
+
 	while(cap.read(frame)) {
         IplImage img = frame;
         frameu.Resize(img.height, img.width, 1);
@@ -218,9 +224,14 @@ void demo() {
 		return;
 	}
 
+	const string filepath = "/home/yuncong/SidLetterTests/a1.mov";
+	vector<Matrixu> frames = loadFromMov(filepath);
+	int curr_idx = 0;
+
 	// Register location
 	do {
 		Matrixu::CaptureImage(capture, frame, 0, 1);
+//		frame = frames[curr_idx++];
 		frame.display(1,1);
 		cvWaitKey(2);
 	}
@@ -236,6 +247,7 @@ void demo() {
 	GET_TIME_VAL(0);
 	for (int cnt = 0; 1; cnt++) {
 		Matrixu::CaptureImage(capture, frame, 0, 1);
+//		frame = frames[curr_idx++];
 
 		// Update location
 		for (int t=0; t<NUM_TRACKERS; t++) {

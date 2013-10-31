@@ -170,7 +170,7 @@ template<> void					Matrixu::display(int fignum, float p)
 	sprintf(name,"Figure %d",fignum);
 	cvNamedWindow( name, 0/*CV_WINDOW_AUTOSIZE*/ );
 	cvShowImage( name, _iplimg );
-	cvResizeWindow( name, (int)(_cols*p), (int)(_rows*p));
+//	cvResizeWindow( name, (int)(_cols*p), (int)(_rows*p));
 	//cvWaitKey(0);//DEBUG
 	freeIpl();
 }
