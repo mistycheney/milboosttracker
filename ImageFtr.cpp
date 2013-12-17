@@ -7,7 +7,9 @@
 
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+ * Generate a filter. A filter is a random number of random boxes.
+ */
 void Ftr::generate(FtrParams *p)
 {
 	_width = p->_width;
@@ -29,7 +31,10 @@ void Ftr::generate(FtrParams *p)
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+ * Compute filter values for all samples in SampleSet.
+ * Directly modify _ftrVals in input SampleSet.
+ */
 void Ftr::compute( SampleSet &samples, const vecFtr &ftrs)
 {
 	int numftrs = ftrs.size();
@@ -37,13 +42,17 @@ void Ftr::compute( SampleSet &samples, const vecFtr &ftrs)
 	if( numsamples==0 ) return;
 
 	samples.resizeFtrs(numftrs);
+//	fprintf(stderr, "resizeFtrs done\n");
 
-	#pragma omp parallel for
+//	float val;
+
+//	#pragma omp parallel for
 	for( int ftr=0; ftr<numftrs; ftr++ ){
-		//#pragma omp parallel for
+//		#pragma omp parallel for
 		for( int k=0; k<numsamples; k++ ){
-			samples.getFtrVal(k,ftr) = ftrs[ftr]->compute(samples[k]);
+			samples.getFtrVal(k,ftr) = ftrs[ftr]->compute(samples[k]);;
 		}
+//	fprintf(stderr, "computing feature %d\n", ftr);
 	}
 
 }
@@ -61,4 +70,26 @@ vecFtr Ftr::generate( FtrParams *params, uint num )
 	return ftrs;
 }
 
+float Ftr::compute( const Sample &sample ) const
+{
+
+	Rect r;
+	float sum = 0.0f;
+	int roi_sum = 0;
+
+	if (sample._imgII->empty()) {
+		integral(*sample._img, *sample._imgII);
+	}
+
+	//#pragma omp parallel for
+	for( int k=0; k<(int)_rects.size(); k++ )
+	{
+		r = _rects[k];
+		roi_sum = sample._imgII->at<int>(r.x, r.y) + sample._imgII->at<int>(r.x+sample._col, r.y+sample._row)
+				-sample._imgII->at<int>(r.x+sample._col, r.y) - sample._imgII->at<int>(r.x, r.y+sample._row);
+		sum += _weights[k]*(float)roi_sum;;
+	}
+
+	return sum;
+}
 

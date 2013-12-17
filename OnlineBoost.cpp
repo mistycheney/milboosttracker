@@ -6,7 +6,9 @@
 #include "Sample.h"
 
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+ * Initialize weak classifier
+ */
 void ClfWeak::init(int id, float lRate, Ftr *ftr)
 {
 	_lRate=lRate;
@@ -20,17 +22,19 @@ void ClfWeak::init(int id, float lRate, Ftr *ftr)
 	_trained = false;
 }
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+ * Initialize strong classifier
+ */
 void ClfStrong::init(ClfParams *params)
 {
-	// initialize model
 	_params		= params;
 	_numsamples = 0;
 
+	// generate _numFeat random filters
 	_ftrs = Ftr::generate(_params->_ftrParams, _params->_numFeat);
 	_weakclf.resize(_params->_numFeat);
+
+	// initialize _numFeat weak classifiers using these random filters
 	for( int k=0; k<_params->_numFeat; k++ ) {
 		_weakclf[k] = new ClfWeak();
 		_weakclf[k]->init(k, _params->_lRate, _ftrs[k]);
@@ -38,14 +42,22 @@ void ClfStrong::init(ClfParams *params)
 }
 
 
+/*
+ * Given positive and negative SampleSet as inputs,
+ * update _selectors and _weakclf of strong classifier
+ */
 void ClfStrong::update(SampleSet &posx, SampleSet &negx)
 {
 	int numneg = negx.size();
 	int numpos = posx.size();
 
-	// compute ftrs
+	// compute feature values for all samples in both sample sets
+	// save into SampleSet;
+	// features are randomly generated at strong classifier initialization
 	if( !posx.ftrsComputed() ) Ftr::compute(posx, _ftrs);
 	if( !negx.ftrsComputed() ) Ftr::compute(negx, _ftrs);
+
+	fprintf(stderr, "compute feature values for all samples \n");
 
 	// initialize H
 	static vectorf Hpos, Hneg;
@@ -57,8 +69,9 @@ void ClfStrong::update(SampleSet &posx, SampleSet &negx)
 	vector<vectorf> pospred(_weakclf.size()), negpred(_weakclf.size());
 
 	// train all weak classifiers without weights
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for( int m=0; m<_params->_numFeat; m++ ){
+//		fprintf(stderr, "update weak classifier %d\n", m);
 		_weakclf[m]->update(posx, negx);
 		pospred[m] = _weakclf[m]->classifySetF(posx);
 		negpred[m] = _weakclf[m]->classifySetF(negx);

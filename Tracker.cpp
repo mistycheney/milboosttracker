@@ -8,15 +8,9 @@
 #include "Sample.h"
 
 
-bool Tracker::init(Matrixu *img, TrackerParams *p, ClfParams *clfparams)
+bool Tracker::init(Mat *img, TrackerParams *p, ClfParams *clfparams)
 {
 	SampleSet posx, negx;
-	int iiFree;
-
-	iiFree = (!img->isInitII());
-
-	if (!img->isInitII())
-		img->initII();
 
 	_clf = new ClfStrong();
 	_clf->init(clfparams);
@@ -31,17 +25,20 @@ bool Tracker::init(Matrixu *img, TrackerParams *p, ClfParams *clfparams)
 	fprintf(stderr,"Initializing Tracker..\n");
 
 	// sample positives and negatives from first frame
+
 	posx.sampleImage(img, _x, _y, _w, _h, p->_init_postrainrad);
 	negx.sampleImage(img, _x, _y, _w, _h, 2.0f*p->_srchwinsz, (1.5f*p->_init_postrainrad), p->_init_negnumtrain);
 	if( posx.size()<1 || negx.size()<1 ) return false;
 
 	// train
 	_clf->update(posx, negx);
+
+	fprintf(stderr,"after _clf->update..\n");
+
 	posx.clear();
 	negx.clear();
 
-	if (iiFree)
-		img->FreeII();
+	fprintf(stderr,"after sampleset clear..\n");
 
 	_trparams = p;
 	_clfparams = clfparams;
@@ -50,18 +47,33 @@ bool Tracker::init(Matrixu *img, TrackerParams *p, ClfParams *clfparams)
 }
 
 
-double Tracker::update_location(Matrixu *img)
+/***
+ * update_location
+ *
+ * get as input an image, updates location _x, _y of tracker.
+ *
+ *
+ */
+
+double Tracker::update_location(Mat *img)
 {
+	fprintf(stderr, "begin update_location\n");
+
 	static SampleSet detectx;
 	static vectorf prob;
 	double resp;
 
-	if (!img->isInitII())
-		abortError(__LINE__,__FILE__,"Integral image not initialized before calling update_location");
+	// detectx selects the location in which to calculate the classifier;
+	// considers all locations within a window around current state;
+	// _srchwinsz is the radius of this window
 
-	// run current clf on search window
+
 	detectx.sampleImage(img, _x, _y, _w, _h, (float)_trparams->_srchwinsz);
+	fprintf(stderr, "sampleImage\n");
+
+	// run current classifier (_clf) on search window
 	prob = _clf->classify(detectx,_trparams->_useLogR);
+	fprintf(stderr, "classify done\n");
 
 	// find best location
 	int bestind = max_idx(prob);
@@ -74,12 +86,11 @@ double Tracker::update_location(Matrixu *img)
 	return resp;
 }
 
-void Tracker::update_classifier(Matrixu *img)
+void Tracker::update_classifier(Mat *img)
 {
-	static SampleSet posx, negx;
+	fprintf(stderr, "begin update_classifier\n");
 
-	if (!img->isInitII())
-		abortError(__LINE__,__FILE__,"Integral image not initialized before calling update_classifier");
+	static SampleSet posx, negx;
 
 	// train location clf (negx are randomly selected from image, posx is just the current tracker location)
 	negx.sampleImage(img, _x, _y, _w, _h, (1.5f*_trparams->_srchwinsz), _trparams->_posradtrain+5, _trparams->_negnumtrain);

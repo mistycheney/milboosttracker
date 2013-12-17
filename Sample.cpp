@@ -4,67 +4,84 @@
 
 #include "Sample.h"
 
-				Sample::Sample(Matrixu *img, int row, int col, int width, int height, float weight) 
-{
-	_img	= img;
-	_row	= row;
-	_col	= col;
-	_width	= width;
-	_height	= height;
+Sample::Sample(Mat *img, int row, int col, int width, int height,
+		float weight) {
+	_img = img;
+	_imgII = new Mat();
+	_row = row;
+	_col = col;
+	_width = width;
+	_height = height;
 	_weight = weight;
 }
 
+void SampleSet::sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
+		float outrad, int maxnum) {
 
+	bool updating = maxnum <= 100000;
+	bool pos = outrad == 0;
 
-void		SampleSet::sampleImage(Matrixu *img, int x, int y, int w, int h, float inrad, float outrad, int maxnum)
-{
-	int rowsz = img->rows() - h - 1;
-	int colsz = img->cols() - w - 1;
-	float inradsq = inrad*inrad;
-	float outradsq = outrad*outrad;
+	int rowsz = img->rows - h - 1;
+	int colsz = img->cols - w - 1;
+	float inradsq = inrad * inrad;
+	float outradsq = outrad * outrad;
 	int dist;
 
-	uint minrow = max(0,(int)y-(int)inrad);
-    uint maxrow = min((int)rowsz-1,(int)y+(int)inrad);
-    uint mincol = max(0,(int)x-(int)inrad);
-    uint maxcol = min((int)colsz-1,(int)x+(int)inrad);
+	uint minrow = max(0, (int) y - (int) inrad);
+	uint maxrow = min((int) rowsz - 1, (int) y + (int) inrad);
+	uint mincol = max(0, (int) x - (int) inrad);
+	uint maxcol = min((int) colsz - 1, (int) x + (int) inrad);
 
-	//fprintf(stderr,"inrad=%f minrow=%d maxrow=%d mincol=%d maxcol=%d\n",inrad,minrow,maxrow,mincol,maxcol);
+//	fprintf(stderr,"inrad=%f minrow=%d maxrow=%d mincol=%d maxcol=%d\n",inrad,minrow,maxrow,mincol,maxcol);
 
-	_samples.resize( (maxrow-minrow+1)*(maxcol-mincol+1) );
-	int i=0;
+	_samples.resize((maxrow - minrow + 1) * (maxcol - mincol + 1));
+	int i = 0;
 
-	float prob = ((float)(maxnum))/_samples.size();
+	float prob = ((float) (maxnum)) / _samples.size();
+
+	Mat roi;
 
 	//#pragma omp parallel for
-	for( int r=minrow; r<=(int)maxrow; r++ )
-		for( int c=mincol; c<=(int)maxcol; c++ ){
-			dist = (y-r)*(y-r) + (x-c)*(x-c);
-			if( randfloat()<prob && dist < inradsq && dist >= outradsq ){
+	for (int r = minrow; r <= (int) maxrow; r++)
+		for (int c = mincol; c <= (int) maxcol; c++) {
+			dist = (y - r) * (y - r) + (x - c) * (x - c);
+			if (randfloat() < prob && dist < inradsq && dist >= outradsq) {
 				_samples[i]._img = img;
 				_samples[i]._col = c;
 				_samples[i]._row = r;
 				_samples[i]._height = h;
 				_samples[i]._width = w;
+
+//				roi = (*img)(Rect(c,r,w,h));
+
+//				if (updating) {
+//					if (pos) {
+//						imwrite((boost::format("pos/sample_pos_%d.jpg")%i).str(), roi);
+//					} else {
+//						imwrite((boost::format("neg/sample_neg_%d.jpg")%i).str(), roi);
+//					}
+//				} else {
+//					imwrite((boost::format("sample/sample_%d.jpg")%i).str(), roi);
+//				}
+
 				i++;
 			}
 		}
 
-	_samples.resize(min(i,maxnum));
+	_samples.resize(min(i, maxnum));
 
 }
 
-void		SampleSet::sampleImage(Matrixu *img, uint num, int w, int h)
-{
-	int rowsz = img->rows() - h - 1;
-	int colsz = img->cols() - w - 1;
+void SampleSet::sampleImage(Mat *img, uint num, int w, int h) {
+	int rowsz = img->rows - h - 1;
+	int colsz = img->cols - w - 1;
 
-	_samples.resize( num );
+	_samples.resize(num);
 	//#pragma omp parallel for
-	for( int i=0; i<(int)num; i++ ){
+	for (int i = 0; i < (int) num; i++) {
 		_samples[i]._img = img;
-		_samples[i]._col = randint(0,colsz);
-		_samples[i]._row = randint(0,rowsz);
+		_samples[i]._col = randint(0, colsz);
+		_samples[i]._row = randint(0, rowsz);
 		_samples[i]._height = h;
 		_samples[i]._width = w;
 	}

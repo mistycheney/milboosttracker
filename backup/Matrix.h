@@ -315,62 +315,63 @@ template<class T> void				Matrix<T>::Resize(uint depth)
 		abortError(__LINE__, __FILE__,"OUT OF MEMORY");
 }
 
-template<class T> void				Matrix<T>::Free() 
-{
-	if( _ii_init ) FreeII();
-	if( _iplimg != NULL ) cvReleaseImage(&_iplimg);
-	_ii_init = false;
+//template<class T> void				Matrix<T>::Free()
+//{
+//	if( _ii_init ) FreeII();
+//	if( _iplimg != NULL ) cvReleaseImage(&_iplimg);
+//	_ii_init = false;
+//
+//	for( uint k=0;  k<_data.size(); k++ )
+//		if( _data[k] != NULL )
+//			if( typeid(T) == typeid(uchar) ){
+//				ippiFree((Ipp8u*)_data[k]);
+//			}
+//			else{
+//				ippiFree((Ipp32f*)_data[k]);
+//			}
+//
+//	_rows = 0;
+//	_cols = 0;
+//	_depth = 0;
+//	_data.resize(0);
+//}
 
-	for( uint k=0;  k<_data.size(); k++ )
-		if( _data[k] != NULL )
-			if( typeid(T) == typeid(uchar) ){
-				ippiFree((Ipp8u*)_data[k]);
-			}
-			else{
-				ippiFree((Ipp32f*)_data[k]);
-			}
-
-	_rows = 0;
-	_cols = 0;
-	_depth = 0;
-	_data.resize(0);
+//template<class T> void				Matrix<T>::Set(T val)
+//{
+//	for( uint k=0; k<_data.size(); k++ )
+//		if( typeid(T) == typeid(uchar) ){
+//			ippiSet_8u_C1R((Ipp8u)val,(Ipp8u*)_data[k], _dataStep,_roi);
+//		}
+//		else{
+//			ippiSet_32f_C1R((Ipp32f)val,(Ipp32f*)_data[k], _dataStep,_roi);
+//		}
+//			//for( uint j=0; j<(uint)_rows*_dataStep; j++ )
+//			//	((Ipp32f*)_data[k])[j] = val;
 }
 
-template<class T> void				Matrix<T>::Set(T val) 
-{
-	for( uint k=0; k<_data.size(); k++ )
-		if( typeid(T) == typeid(uchar) ){
-			ippiSet_8u_C1R((Ipp8u)val,(Ipp8u*)_data[k], _dataStep,_roi);
-		}
-		else{
-			ippiSet_32f_C1R((Ipp32f)val,(Ipp32f*)_data[k], _dataStep,_roi);
-		}
-			//for( uint j=0; j<(uint)_rows*_dataStep; j++ )
-			//	((Ipp32f*)_data[k])[j] = val;
-}
-template<class T> void				Matrix<T>::Set(T val, int k) 
-{
-	if( typeid(T) == typeid(uchar) ){
-		ippiSet_8u_C1R((Ipp8u)val,(Ipp8u*)_data[k], _dataStep,_roi);
-	}
-	else{
-		ippiSet_32f_C1R((Ipp32f)val,(Ipp32f*)_data[k], _dataStep,_roi);
-	}
-}
+//template<class T> void				Matrix<T>::Set(T val, int k)
+//{
+//	if( typeid(T) == typeid(uchar) ){
+//		ippiSet_8u_C1R((Ipp8u)val,(Ipp8u*)_data[k], _dataStep,_roi);
+//	}
+//	else{
+//		ippiSet_32f_C1R((Ipp32f)val,(Ipp32f*)_data[k], _dataStep,_roi);
+//	}
+//}
 
 
-template<class T> void				Matrix<T>::FreeII() 
-{
-	for( uint k=0;  k<_iidata.size(); k++ )
-		ippiFree(_iidata[k]);
-	_iidata.resize(0);
-	_ii_init = false;
-}
-
-template<class T>					Matrix<T>::~Matrix()
-{
-	Free();
-}
+//template<class T> void				Matrix<T>::FreeII()
+//{
+//	for( uint k=0;  k<_iidata.size(); k++ )
+//		ippiFree(_iidata[k]);
+//	_iidata.resize(0);
+//	_ii_init = false;
+//}
+//
+//template<class T>					Matrix<T>::~Matrix()
+//{
+//	Free();
+//}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

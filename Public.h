@@ -35,21 +35,27 @@
 #pragma comment(lib,"ippcore.lib")
 #pragma comment(lib,"ippcv.lib")
 
-#include "opencv/cxcore.h"
-#include "opencv/highgui.h"
-#include "opencv/cv.h"
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
 
-#pragma comment(lib,"cxcore.lib")
-#pragma comment(lib,"highgui.lib")
-#pragma comment(lib,"cvhaartraining.lib")
-#pragma comment(lib,"ml.lib")
-#pragma comment(lib,"cvaux.lib")
-#pragma comment(lib,"cxts.lib")
+#include <armadillo>
+
+//#include "opencv/highgui.h"
+//#include "opencv/cv.h"
+
+//#pragma comment(lib,"cxcore.lib")
+//#pragma comment(lib,"highgui.lib")
+//#pragma comment(lib,"cvhaartraining.lib")
+//#pragma comment(lib,"ml.lib")
+//#pragma comment(lib,"cvaux.lib")
+//#pragma comment(lib,"cxts.lib")
 
 #include "omp.h"
 #include "timer.h"
 
 using namespace std;
+using namespace cv;
 
 typedef unsigned char  uchar;
 typedef unsigned short ushort;
@@ -76,7 +82,8 @@ typedef vector<bool>	vectorb;
 #define  round(v)   ((int) (v+0.5))
 
 //static CvRNG rng_state = cvRNG((int)time(NULL));
-static CvRNG rng_state = cvRNG(1);
+static RNG rng( 0xFFFFFFFF );
+//static CvRNG rng_state = cvRNG(1);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // Debug timing stuff
@@ -106,7 +113,7 @@ static CvRNG rng_state = cvRNG(1);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // random generator stuff
-void				randinitalize( const int init );
+//void				randinitalize( const int init );
 int					randint( const int min=0, const int max=5 );
 vectori				randintvec( const int min=0, const int max=5, const uint num=100 );
 vectorf				randfloatvec( const uint num=100 );
