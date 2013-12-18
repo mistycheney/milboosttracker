@@ -5,122 +5,138 @@
 #include "OnlineBoost.h"
 #include "Sample.h"
 
+using namespace arma;
 
 /*
  * Initialize weak classifier
  */
-void ClfWeak::init(int id, float lRate, Ftr *ftr)
-{
-	_lRate=lRate;
-	_ind=id;
+void ClfWeak::init(int id, float lRate, Ftr *ftr) {
+	_lRate = lRate;
+	_ind = id;
 	_ftr = ftr;
-	_mu0	= 0;
-	_mu1	= 0;
-	_sig0	= 1;
-	_sig1	= 1;
-	_lRate	= 0.85f;
+	_mu0 = 0;
+	_mu1 = 0;
+	_sig0 = 1;
+	_sig1 = 1;
+	_lRate = 0.85f;
 	_trained = false;
 }
 
 /*
  * Initialize strong classifier
  */
-void ClfStrong::init(ClfParams *params)
-{
-	_params		= params;
+void ClfStrong::init(ClfParams *params) {
+	_params = params;
 	_numsamples = 0;
 
-	// generate _numFeat random filters
-	_ftrs = Ftr::generate(_params->_ftrParams, _params->_numFeat);
+	// generate _numFeat random features
+	_ftrs = Ftr::generateAll(_params->_ftrParams, _params->_numFeat);
 	_weakclf.resize(_params->_numFeat);
 
 	// initialize _numFeat weak classifiers using these random filters
-	for( int k=0; k<_params->_numFeat; k++ ) {
+	for (int k = 0; k < _params->_numFeat; k++) {
 		_weakclf[k] = new ClfWeak();
 		_weakclf[k]->init(k, _params->_lRate, _ftrs[k]);
 	}
 }
 
-
 /*
  * Given positive and negative SampleSet as inputs,
  * update _selectors and _weakclf of strong classifier
  */
-void ClfStrong::update(SampleSet &posx, SampleSet &negx)
-{
+void ClfStrong::update(SampleSet &posx, SampleSet &negx) {
 	int numneg = negx.size();
 	int numpos = posx.size();
 
-	// compute feature values for all samples in both sample sets
-	// save into SampleSet;
-	// features are randomly generated at strong classifier initialization
-	if( !posx.ftrsComputed() ) Ftr::compute(posx, _ftrs);
-	if( !negx.ftrsComputed() ) Ftr::compute(negx, _ftrs);
+	fprintf(stderr,
+			"update strong classifier using %d positive, %d negative samples\n",
+			numpos, numneg);
 
-	fprintf(stderr, "compute feature values for all samples \n");
-
-	// initialize H
-	static vectorf Hpos, Hneg;
-	Hpos.clear(); Hneg.clear();
-	Hpos.resize(posx.size(),0.0f), Hneg.resize(negx.size(),0.0f);
+	if (!posx.ftrsComputed())
+		Ftr::computeAll(posx, _ftrs);
+	if (!negx.ftrsComputed())
+		Ftr::computeAll(negx, _ftrs);
 
 	_selectors.clear();
-	vectorf posw(posx.size()), negw(negx.size());
-	vector<vectorf> pospred(_weakclf.size()), negpred(_weakclf.size());
 
-	// train all weak classifiers without weights
-//	#pragma omp parallel for
-	for( int m=0; m<_params->_numFeat; m++ ){
-//		fprintf(stderr, "update weak classifier %d\n", m);
-		_weakclf[m]->update(posx, negx);
-		pospred[m] = _weakclf[m]->classifySetF(posx);
-		negpred[m] = _weakclf[m]->classifySetF(negx);
+	fvec Hpos(numpos);
+	fvec Hneg(numneg);
+	fvec L(_params->_numFeat);
+	fmat hpos(numpos, _params->_numFeat);
+	fmat hneg(numneg, _params->_numFeat);
+	float Lpos, Lneg;
+
+	for (int j = 0; j < _params->_numFeat; j++) {
+		fprintf(stderr, "update weak classifier %d \n", j);
+		_weakclf[j]->update(posx, negx);
 	}
 
 
 	// pick the best features
-	for( int s=0; s<_params->_numSel; s++ ){
+	for (int s = 0; s < _params->_numSel; s++) {
+		for (int j = 0; j < (int) _weakclf.size(); j++) {
+			hpos.col(j) = _weakclf[j]->classify(posx);
+			hneg.col(j) = _weakclf[j]->classify(negx);
 
-		// compute errors/likl for all weak clfs
-		vectorf poslikl(_weakclf.size(),1.0f), neglikl(_weakclf.size()), likl(_weakclf.size());
-		#pragma omp parallel for
-		for( int w=0; w<(int)_weakclf.size(); w++) {
-			float lll=1.0f;
-			//#pragma omp parallel for reduction(*: lll)
-			for( int j=0; j<numpos; j++ )
-				lll *= oneminussigmoid(Hpos[j]+pospred[w][j]);
-			poslikl[w] = (float)-logf(1-lll+1e-5);
-
-			lll=1.0f;
-			for( int j=0; j<numneg; j++ )
-				lll *= oneminussigmoid(Hneg[j]+negpred[w][j]);
-			neglikl[w]= (float)-logf(lll+1e-5);
-
-			likl[w] = poslikl[w]/numpos + neglikl[w]/numneg;
+			Lpos = -trunc_log(
+					1 - prod(1 - 1 / (1 + trunc_exp(-(Hpos + hpos.col(j))))))
+					/ numpos;
+			Lneg = -trunc_log(
+					1 - prod(1 - 1 / (1 + trunc_exp(-(Hneg + hneg.col(j))))))
+					/ numneg;
+			L(j) = Lpos + Lneg;
 		}
 
-		// pick best weak clf
-		vectori order;
-		sort_order_asc(likl,order);
-
-		// find best weakclf that isn't already included
-		for( uint k=0; k<order.size(); k++ )
-			if( count( _selectors.begin(), _selectors.end(), order[k])==0 ){
-				_selectors.push_back(order[k]);
+		uvec indices = sort_index(L);
+		uint best;
+		BOOST_FOREACH(uint k, indices) {
+			if (find(_selectors.begin(), _selectors.end(), k)
+					== _selectors.end()) {
+				_selectors.push_back(k);
+				best = k;
 				break;
 			}
+		}
 
-		// update H = H + h_m
-		#pragma omp parallel for
-		for( int k=0; k<posx.size(); k++ )
-			Hpos[k] += pospred[_selectors[s]][k];
-		#pragma omp parallel for
-		for( int k=0; k<negx.size(); k++ )
-			Hneg[k] += negpred[_selectors[s]][k];
+		Hpos = Hpos + hpos.col(best);
+		Hneg = Hneg + hneg.col(best);
 	}
 
 	return;
 }
 
+// run weak classifiers in _selectors, then combine weak classifier scores
+arma::fvec ClfStrong::classify(SampleSet &x, bool logR) {
+	int numsamples = x.size();
+	fprintf(stderr, "numsamples = %d\n", numsamples);
+	fprintf(stderr, "selector size = %d\n", _selectors.size());
 
+	if (!x.ftrsComputed()) {
+		Ftr::computeAll(x, _ftrs);
+	}
 
+	fmat hjxi = zeros<fmat>(numsamples, _ftrs.size());
+//	fvec hj;
+
+	int rowInd = 0;
+	BOOST_FOREACH(int j, _selectors) {
+		hjxi.col(rowInd) = _weakclf[j]->classify(x);
+		rowInd++;
+	}
+
+	cout << hjxi.n_cols << "," << hjxi.n_rows << endl;
+
+	arma::fvec H = arma::sum(hjxi, 1);
+
+	return H;
+}
+
+inline fvec ClfWeak::classify(SampleSet &x) {
+	fvec fv = x._ftrVals.col(_ind);
+	fvec dev1 = fv - _mu1;
+	fvec dev0 = fv - _mu0;
+	fvec hj = -square(dev1) / (2 * _sig1) - 0.5 * logf(_sig1)
+			+ square(dev0) / (2 * _sig0) - 0.5 * logf(_sig0);
+
+	return hj;
+}

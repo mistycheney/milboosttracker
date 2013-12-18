@@ -196,7 +196,7 @@ void demo() {
 		tr[i] = new Tracker();
 	}
 
-	const string filepath = "/home/yuncong/SidLetterTests/a1_trim.mov";
+	const string filepath = "/home/yuncong/SidLetterTests/g1.mov";
 
 	Mat frame_rgb, frame_small;
 
@@ -271,7 +271,7 @@ void demo() {
 		}
 		imshow("Figure 1", vis);
 
-		char q = waitKey(1);
+		char q = waitKey();
 		if (q == 'q')
 			break;
 		else if (q == 'r') {

@@ -4,17 +4,6 @@
 
 #include "Sample.h"
 
-Sample::Sample(Mat *img, int row, int col, int width, int height,
-		float weight) {
-	_img = img;
-	_imgII = new Mat();
-	_row = row;
-	_col = col;
-	_width = width;
-	_height = height;
-	_weight = weight;
-}
-
 void SampleSet::sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
 		float outrad, int maxnum) {
 
@@ -39,21 +28,25 @@ void SampleSet::sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
 
 	float prob = ((float) (maxnum)) / _samples.size();
 
-	Mat roi;
-
 	//#pragma omp parallel for
-	for (int r = minrow; r <= (int) maxrow; r++)
+	for (int r = minrow; r <= (int) maxrow; r++) {
 		for (int c = mincol; c <= (int) maxcol; c++) {
 			dist = (y - r) * (y - r) + (x - c) * (x - c);
 			if (randfloat() < prob && dist < inradsq && dist >= outradsq) {
-				_samples[i]._img = img;
+//				_samples[i]._img = img;
+				_samples[i]._img = new Mat();
+				*(_samples[i]._img) = (*img)(Rect(c, r, w, h));
 				_samples[i]._col = c;
 				_samples[i]._row = r;
 				_samples[i]._height = h;
 				_samples[i]._width = w;
 
-//				roi = (*img)(Rect(c,r,w,h));
+				if (_samples[i]._imgII == NULL) {
+					_samples[i]._imgII = new Mat();
+					integral(*(_samples[i]._img), *(_samples[i]._imgII));
+				}
 
+//				roi = (*img)(Rect(c,r,w,h));
 //				if (updating) {
 //					if (pos) {
 //						imwrite((boost::format("pos/sample_pos_%d.jpg")%i).str(), roi);
@@ -67,22 +60,7 @@ void SampleSet::sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
 				i++;
 			}
 		}
-
-	_samples.resize(min(i, maxnum));
-
-}
-
-void SampleSet::sampleImage(Mat *img, uint num, int w, int h) {
-	int rowsz = img->rows - h - 1;
-	int colsz = img->cols - w - 1;
-
-	_samples.resize(num);
-	//#pragma omp parallel for
-	for (int i = 0; i < (int) num; i++) {
-		_samples[i]._img = img;
-		_samples[i]._col = randint(0, colsz);
-		_samples[i]._row = randint(0, rowsz);
-		_samples[i]._height = h;
-		_samples[i]._width = w;
 	}
+	_samples.resize(min(i, maxnum));
+	fprintf(stderr, "sampled %d patches\n", _samples.size());
 }

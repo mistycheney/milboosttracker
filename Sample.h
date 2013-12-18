@@ -5,23 +5,14 @@
 #ifndef H_SAMPLE
 #define H_SAMPLE
 
-//#include "Matrix.h"
 #include "Public.h"
 #include <boost/foreach.hpp>
-#include <boost/format.hpp>
-
-class Sample;
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class Sample {
 public:
-	Sample(Mat *img, int row, int col, int width = 0, int height = 0,
-			float weight = 1.0);
 	Sample() {
 		_img = NULL;
-		_imgII = new Mat();
+		_imgII = NULL;
 		_row = _col = _height = _width = 0;
 		_weight = 1.0f;
 	}
@@ -36,111 +27,65 @@ public:
 
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 class SampleSet {
 public:
 	SampleSet() {
+
 	}
-	;
+
 	SampleSet(const Sample &s) {
 		_samples.push_back(s);
 	}
-	;
 
 	int size() const {
 		return _samples.size();
 	}
-	;
 	void push_back(const Sample &s) {
 		_samples.push_back(s);
 	}
-	;
-	void push_back(Mat *img, int x, int y, int width = 0, int height = 0,
-			float weight = 1.0f);
-	void resize(int i) {
-		_samples.resize(i);
-	}
-	;
-	void resizeFtrs(int i);
-	float & getFtrVal(int sample, int ftr) {
-		return _ftrVals[ftr][sample];
-	}
-	;
-	float getFtrVal(int sample, int ftr) const {
-		return _ftrVals[ftr][sample];
-	}
-	;
-	Sample & operator[](const int sample) {
-		return _samples[sample];
-	}
-	;
+
 	Sample operator[](const int sample) const {
 		return _samples[sample];
 	}
-	;
-	vector<float> ftrVals(int ftr) const {
-		return _ftrVals[ftr];
+
+	inline bool ftrsComputed() const {
+		return (!_ftrVals.empty() && !_samples.empty());
 	}
-	;
-	bool ftrsComputed() const {
-		if (!_ftrVals.empty() && !_samples.empty()) {
-			if ( _ftrVals[0].size() > 0) {
-				return true;
-			}
-		}
-		return false;
-	}
-	;
+
 	void clear() {
+
 		_ftrVals.clear();
-		fprintf(stderr,"after vector clear..\n");
 
-//		BOOST_FOREACH (Sample s, _samples) {
-//			delete s._imgII;
-//		}
-//		fprintf(stderr,"after vector clear..\n");
+		BOOST_FOREACH (Sample s, _samples) {
+			delete s._imgII;
+			delete s._img;
+		}
 
-		_samples.clear();
+		vector<Sample>().swap(_samples);
 	}
-	;
 
 	// densly sample the image in a donut shaped region: will take points inside circle of radius inrad,
 	// but outside of the circle of radius outrad.  when outrad=0 (default), then just samples points inside a circle
 	void sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
 			float outrad = 0, int maxnum = 1000000);
-	void sampleImage(Mat *img, uint num, int w, int h);
+
+	arma::fmat _ftrVals;
 
 private:
 	vector<Sample> _samples;
-	vector<vector<float> > _ftrVals; // [ftr][sample]
-
 };
-
 
 inline Sample& Sample::operator=(const Sample &a) {
 	_img = a._img;
+	_imgII = a._imgII;
 	_row = a._row;
 	_col = a._col;
 	_width = a._width;
 	_height = a._height;
+	_weight = a._weight;
 
 	return (*this);
 }
 
-inline void SampleSet::resizeFtrs(int nftr) {
-	_ftrVals.resize(nftr);
-	int nsamp = _samples.size();
-	if (nsamp > 0)
-		for (int k = 0; k < nftr; k++)
-			_ftrVals[k].resize(nsamp);
-}
-
-inline void SampleSet::push_back(Mat *img, int x, int y, int width, int height,
-		float weight) {
-	Sample s(img, y, x, width, height, weight);
-	push_back(s);
-}
 
 #endif

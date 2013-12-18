@@ -28,8 +28,8 @@ public:
 	float compute(const Sample &sample) const;
 	void generate(FtrParams *params);
 
-	static void compute(SampleSet &samples, const vecFtr &ftrs);
-	static vecFtr generate(FtrParams *params, uint num);
+	static void computeAll(SampleSet &samples, const vecFtr &ftrs);
+	static vecFtr generateAll(FtrParams *params, uint num);
 	uint _width, _height;
 	vectorf _weights;
 	vector<Rect> _rects;
