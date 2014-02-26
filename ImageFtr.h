@@ -27,6 +27,7 @@ public:
 	;
 	float compute(const Sample &sample) const;
 	void generate(FtrParams *params);
+	Mat visualize() const;
 
 	static void computeAll(SampleSet &samples, const vecFtr &ftrs);
 	static vecFtr generateAll(FtrParams *params, uint num);

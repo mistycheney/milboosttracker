@@ -66,11 +66,10 @@ void ClfStrong::update(SampleSet &posx, SampleSet &negx) {
 	fmat hneg(numneg, _params->_numFeat);
 	float Lpos, Lneg;
 
+	fprintf(stderr, "update weak classifiers \n");
 	for (int j = 0; j < _params->_numFeat; j++) {
-		fprintf(stderr, "update weak classifier %d \n", j);
 		_weakclf[j]->update(posx, negx);
 	}
-
 
 	// pick the best features
 	for (int s = 0; s < _params->_numSel; s++) {
@@ -89,6 +88,7 @@ void ClfStrong::update(SampleSet &posx, SampleSet &negx) {
 
 		uvec indices = sort_index(L);
 		uint best;
+
 		BOOST_FOREACH(uint k, indices) {
 			if (find(_selectors.begin(), _selectors.end(), k)
 					== _selectors.end()) {
@@ -124,8 +124,6 @@ arma::fvec ClfStrong::classify(SampleSet &x, bool logR) {
 		rowInd++;
 	}
 
-	cout << hjxi.n_cols << "," << hjxi.n_rows << endl;
-
 	arma::fvec H = arma::sum(hjxi, 1);
 
 	return H;
@@ -139,4 +137,40 @@ inline fvec ClfWeak::classify(SampleSet &x) {
 			+ square(dev0) / (2 * _sig0) - 0.5 * logf(_sig0);
 
 	return hj;
+}
+
+void ClfWeak::update(SampleSet &posx, SampleSet &negx) {
+	float posmu = 0.0, negmu = 0.0;
+
+	arma::fvec pfv = posx._ftrVals.col(_ind);
+	arma::fvec nfv = negx._ftrVals.col(_ind);
+
+	if (_trained) {
+		if (posx.size() > 0) {
+			_mu1 = _lRate * _mu1 + (1 - _lRate) * arma::mean(pfv);
+			_sig1 = _lRate * _sig1
+					+ (1 - _lRate) * arma::mean(square(pfv - _mu1));
+		}
+		if (negx.size() > 0) {
+			_mu0 = _lRate * _mu0 + (1 - _lRate) * arma::mean(nfv);
+			_sig0 = _lRate * _sig0
+					+ (1 - _lRate) * arma::mean(square(nfv - _mu0));
+		}
+	} else {
+		_trained = true;
+		if (posx.size() > 0) {
+			_mu1 = arma::mean(pfv);
+			_sig1 = arma::var(pfv) + 1e-9f;
+		}
+
+		if (negx.size() > 0) {
+			_mu0 = arma::mean(nfv);
+			_sig0 = arma::var(nfv) + 1e-9f;
+		}
+	}
+
+	_n0 = logf(1e-5 * (1.0f / pow(_sig0, 0.5f)));
+	_n1 = logf(1e-5 * (1.0f / pow(_sig1, 0.5f)));
+	_e1 = -1.0f / (2.0f * _sig1 + 1e-99);
+	_e0 = -1.0f / (2.0f * _sig0 + 1e-99);
 }

@@ -4,6 +4,7 @@
 
 #include "ImageFtr.h"
 #include "Sample.h"
+#include <algorithm>    // std::max
 
 /*
  * Compute filter values for all samples in SampleSet.
@@ -21,9 +22,6 @@ void Ftr::computeAll(SampleSet &samples, const vecFtr &ftrs) {
 	samples._ftrVals.zeros(numsamples, numftrs);
 //	#pragma omp parallel for
 	for (int j = 0; j < numftrs; j++) {
-//		cerr << ftrs[f]->_rects << endl;
-//		cerr << ftrs[f]->_weights << endl;
-		//		#pragma omp parallel for
 		for (int i = 0; i < numsamples; i++) {
 			samples._ftrVals(i, j) = ftrs[j]->compute(samples[i]);
 			;
@@ -34,9 +32,19 @@ void Ftr::computeAll(SampleSet &samples, const vecFtr &ftrs) {
 vecFtr Ftr::generateAll(FtrParams *params, uint num) {
 	vecFtr ftrs;
 	ftrs.resize(num);
+//	namedWindow("visualize feature");
+//	Mat vis;
 	for (uint k = 0; k < num; k++) {
+//		fprintf(stderr, "Feature %d\n", k);
+
 		ftrs[k] = new Ftr();
 		ftrs[k]->generate(params);
+
+//		vis = ftrs[k]->visualize();
+//		cerr << ftrs[k]->_rects << endl;
+//		cerr << ftrs[k]->_weights << endl;
+//		imshow("visualize feature", vis);
+//		waitKey();
 	}
 	return ftrs;
 }
@@ -60,6 +68,18 @@ void Ftr::generate(FtrParams *p) {
 		_rects[k].width = randint(1, (p->_width - _rects[k].x - 2));
 		_rects[k].height = randint(1, (p->_height - _rects[k].y - 2));
 	}
+}
+
+
+Mat Ftr::visualize() const {
+	Mat vis(_height, _width, CV_8U, Scalar(127));
+
+	for (int i=0; i<_weights.size(); i++) {
+		Mat roi(vis, _rects[i]);
+		roi = min((int)((_weights[i]*1000+1)/2*255), 255);
+	}
+
+	return vis;
 }
 
 float Ftr::compute(const Sample &sample) const {

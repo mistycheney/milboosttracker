@@ -9,11 +9,15 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
+#include <boost/filesystem.hpp>
+#include <boost/format.hpp>
+
 #define NUM_TRACKERS 1
 #define NUM_SEL_FEATS 50
 #define NUM_FEATS 250
 
 using namespace cv;
+using namespace boost::filesystem;
 
 GET_TIME_INIT(2);
 
@@ -113,75 +117,97 @@ void initParams(TrackerParams *trparams[], FtrParams *ftrparams[],
 	}
 }
 
-bool withinRad(vectori *xPos, vectori *yPos, int rad, int numFrames) {
-	int xdist, ydist;
-	int zdist = rad * rad;
-	if (xPos->size() >= numFrames) {
-		for (int i = xPos->size() - 2; i >= 0 && i >= xPos->size() - numFrames;
-				i--) {
-			xdist = ((*xPos)[i + 1] - (*xPos)[i])
-					* ((*xPos)[i + 1] - (*xPos)[i]);
-			ydist = ((*yPos)[i + 1] - (*yPos)[i])
-					* ((*yPos)[i + 1] - (*yPos)[i]);
-			if (xdist + ydist > zdist)
-				return false;
-		}
-	}
-	return true;
-}
+//bool withinRad(vectori *xPos, vectori *yPos, int rad, int numFrames) {
+//	int xdist, ydist;
+//	int zdist = rad * rad;
+//	if (xPos->size() >= numFrames) {
+//		for (int i = xPos->size() - 2; i >= 0 && i >= xPos->size() - numFrames;
+//				i--) {
+//			xdist = ((*xPos)[i + 1] - (*xPos)[i])
+//					* ((*xPos)[i + 1] - (*xPos)[i]);
+//			ydist = ((*yPos)[i + 1] - (*yPos)[i])
+//					* ((*yPos)[i + 1] - (*yPos)[i]);
+//			if (xdist + ydist > zdist)
+//				return false;
+//		}
+//	}
+//	return true;
+//}
 
-void mouseHandler(int event, int x, int y, int, void* bb) {
-	Rect* bbb = reinterpret_cast<Rect*>(bb);
+typedef struct {
+	Rect* bb;
+	bool* dragging;
+} bb_done_struct;
+
+void mouseHandler(int event, int x, int y, int, void* data) {
+	bb_done_struct* bb_done = reinterpret_cast<bb_done_struct*>(data);
+	Rect* bb = bb_done->bb;
 	if (event == EVENT_LBUTTONDOWN) {
-		bbb->x = x;
-		bbb->y = y;
-	} else if (event == EVENT_LBUTTONUP) {
-		bbb->width = x - bbb->x;
-		bbb->height = y - bbb->y;
+		if (!*(bb_done->dragging)) {
+			bb->x = x;
+			bb->y = y;
+			bb->width = 0;
+			bb->height = 0;
+			*(bb_done->dragging) = true;
+		} else {
+			*(bb_done->dragging) = false;
+		}
+	} else if (*(bb_done->dragging) && event == cv::EVENT_MOUSEMOVE) {
+		bb->width = x - bb->x;
+		bb->height = y - bb->y;
 	}
-
 }
 
 int getBBFromUser(Mat *img, Rect *bb) {
-	bool correctBB = false;
+	bool done = false;
+	bool dragging = false;
 
 	Mat imgrgb, vis;
 	cvtColor(*img, imgrgb, cv::COLOR_GRAY2BGR);
 
-	string window_name = "Draw bounding box and press Enter";
-	imshow("Figure 1", imgrgb);
-	setMouseCallback("Figure 1", mouseHandler, bb);
+	bb_done_struct bb_done;
+	bb_done.bb = bb;
+	bb_done.dragging = &dragging;
+	setMouseCallback("Figure 1", mouseHandler, &bb_done);
 
-	while (!correctBB) {
+	while (!done) {
 
-		char key = waitKey(0);
+		imgrgb.copyTo(vis);
+
+		if (!done) {
+			rectangle(vis, Point(bb->x, bb->y),
+					Point(bb->x + bb->width, bb->y + bb->height),
+					Scalar(255, 0, 0));
+		}
+
+		char key = waitKey(1);
 		if (key == 'q') {
 			return 0;
 		}
-		if (((key == '\n') || (key == '\r')) && (bb->x != -1)
-				&& (bb->y != -1)) {
-			correctBB = true;
+		if ((key == '\n') || (key == '\r')) {
+			done = true;
 		}
 
-		vis = imgrgb;
 		imshow("Figure 1", vis);
 	}
 
 	printf("initialize %d, %d, %d, %d\n", bb->x, bb->y, bb->width, bb->height);
 
-//	setMouseCallback(window_name, NULL, NULL);
+	setMouseCallback("Figure 1", NULL, NULL);
 	return 0;
 }
 
-void demo() {
+void demo(char* images_path) {
 	Tracker *tr[NUM_TRACKERS];
 	TrackerParams *trparams[NUM_TRACKERS];
 	ClfParams *clfparams[NUM_TRACKERS];
 	FtrParams *ftrparams[NUM_TRACKERS];
 	Mat f[NUM_TRACKERS];
-	Mat frame, vis;
+	Mat frame, vis, frameRGB, frame_small;
 	int initX, initY, initW, initH;
 	double ttime = 0.0;
+
+	namedWindow("Figure 1");
 
 	// print usage
 	printf("Commands:\n");
@@ -196,45 +222,48 @@ void demo() {
 		tr[i] = new Tracker();
 	}
 
-	const string filepath = "/home/yuncong/SidLetterTests/g1.mov";
+	//	const string filepath = "/home/yuncong/SidLetterTests/g1.mov";
+	//	VideoCapture cap(filepath);
+	//	if (!cap.isOpened()) {
+	//		throw "Cannot open file."; // check if we succeeded
+	//	}
+	//	cap.read(frameRGB);
 
-	Mat frame_rgb, frame_small;
+	path sequencePath(images_path);
 
-	VideoCapture cap(filepath);
-	if (!cap.isOpened()) {
-		throw "Cannot open file."; // check if we succeeded
-	}
-
-	cap.read(frame_rgb);
-	cvtColor(frame_rgb, frame, COLOR_BGR2GRAY);
+	int ind = 0;
+	string ifn =
+			(sequencePath / path((boost::format("%d.jpg") % ind).str())).string();
+	frameRGB = imread(ifn, 1);
+	cvtColor(frameRGB, frame, COLOR_BGR2GRAY);
 //	resize(frame, frame_small, Size(frame.cols / 4, frame.rows / 4));
 
-	Rect bb = Rect(-1, -1, -1, -1);
+	Rect bb;
 	getBBFromUser(&frame, &bb);
 
-	initX = bb.x;
-	initY = bb.y;
+	initX = bb.x + bb.width / 2;
+	initY = bb.y + bb.height / 2;
 	initW = bb.width;
 	initH = bb.height;
 
-	// Initialize location on first frame
 	initParams(trparams, ftrparams, clfparams, 1.0, initX, initY, initW, initH,
 			25, NUM_TRACKERS, NUM_FEATS, NUM_SEL_FEATS);
 
-	printf("init params \n");
+	printf("initialize trackers \n");
 
 	for (int t = 0; t < NUM_TRACKERS; t++) {
 		tr[t]->init(&frame, trparams[t], clfparams[t]);
 	}
-
-	printf("tracker init \n");
+	char q = waitKey();
 
 	GET_TIME_VAL(0);
 
-	int ind = 0;
-	while (cap.read(frame_rgb)) {
+	for (;; ind++) {
 
-		cvtColor(frame_rgb, frame, COLOR_BGR2GRAY);
+		ifn =
+				(sequencePath / path((boost::format("%d.jpg") % ind).str())).string();
+		frameRGB = imread(ifn, 1);
+		cvtColor(frameRGB, frame, COLOR_BGR2GRAY);
 //		resize(frame, frame_small, Size(frame.cols / 4, frame.rows / 4));
 
 		fprintf(stderr, "Frame %d\n", ind++);
@@ -261,11 +290,15 @@ void demo() {
 		// Draw locations
 		cvtColor(frame, vis, COLOR_GRAY2BGR);
 		for (int t = 0; t < NUM_TRACKERS; t++) {
+
+			fprintf(stderr, "%d,%d,%d,%d\n", tr[t]->_x, tr[t]->_y, tr[t]->_w,
+					tr[t]->_h);
+
 			rectangle(vis,
-					Point(tr[t]->_x * tr[t]->_scale, tr[t]->_y * tr[t]->_scale),
-					Point(tr[t]->_x * tr[t]->_scale + tr[t]->_w * tr[t]->_scale,
-							tr[t]->_y * tr[t]->_scale
-									+ tr[t]->_h * tr[t]->_scale),
+					Point((tr[t]->_x - tr[t]->_w / 2) * tr[t]->_scale,
+							(tr[t]->_y - tr[t]->_h / 2) * tr[t]->_scale),
+					Point((tr[t]->_x + tr[t]->_w / 2) * tr[t]->_scale,
+							(tr[t]->_y + tr[t]->_h / 2) * tr[t]->_scale),
 					Scalar(trparams[t]->_boxcolor[0], trparams[t]->_boxcolor[1],
 							trparams[t]->_boxcolor[2]));
 		}
@@ -278,16 +311,23 @@ void demo() {
 			getBBFromUser(&frame, &bb);
 
 			for (int t = 0; t < NUM_TRACKERS; t++) {
-				tr[t]->_x = bb.x;
-				tr[t]->_y = bb.y;
-				tr[t]->_w = bb.width;
-				tr[t]->_h = bb.height;
+				trparams[t]->_initX = bb.x + bb.width / 2;
+				trparams[t]->_initY = bb.y + bb.height / 2;
+				trparams[t]->_initW = bb.width;
+				trparams[t]->_initH = bb.height;
+
+				tr[t]->init(&frame, trparams[t], clfparams[t]);
 			}
+			waitKey();
 		}
 	}
 }
 
 int main(int argc, char * argv[]) {
-	demo();
+	if (argc != 2) {
+            cout << "usage: "<< argv[0] << " <images path>\n";
+        } else {
+            demo(argv[1]);
+        }
 }
 

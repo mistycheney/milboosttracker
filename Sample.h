@@ -16,8 +16,18 @@ public:
 		_row = _col = _height = _width = 0;
 		_weight = 1.0f;
 	}
-	;
-	Sample& operator=(const Sample &a);
+
+//	Sample& operator=(const Sample &a) {
+//		_img = a._img;
+//		_imgII = a._imgII;
+//		_row = a._row;
+//		_col = a._col;
+//		_width = a._width;
+//		_height = a._height;
+//		_weight = a._weight;
+//
+//		return (*this);
+//	}
 
 public:
 	Mat *_img;
@@ -40,9 +50,9 @@ public:
 	int size() const {
 		return _samples.size();
 	}
-	void push_back(const Sample &s) {
-		_samples.push_back(s);
-	}
+//	void push_back(const Sample &s) {
+//		_samples.push_back(s);
+//	}
 
 	Sample operator[](const int sample) const {
 		return _samples[sample];
@@ -67,25 +77,12 @@ public:
 	// densly sample the image in a donut shaped region: will take points inside circle of radius inrad,
 	// but outside of the circle of radius outrad.  when outrad=0 (default), then just samples points inside a circle
 	void sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
-			float outrad = 0, int maxnum = 1000000);
+			float outrad = 0, int maxnum = 100, int flag=0);
 
 	arma::fmat _ftrVals;
 
 private:
 	vector<Sample> _samples;
 };
-
-inline Sample& Sample::operator=(const Sample &a) {
-	_img = a._img;
-	_imgII = a._imgII;
-	_row = a._row;
-	_col = a._col;
-	_width = a._width;
-	_height = a._height;
-	_weight = a._weight;
-
-	return (*this);
-}
-
 
 #endif

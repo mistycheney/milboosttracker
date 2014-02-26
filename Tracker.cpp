@@ -24,9 +24,9 @@ bool Tracker::init(Mat *img, TrackerParams *p, ClfParams *clfparams) {
 
 	// sample positives and negatives from first frame
 
-	posx.sampleImage(img, _x, _y, _w, _h, p->_init_postrainrad);
+	posx.sampleImage(img, _x, _y, _w, _h, p->_init_postrainrad, 0, 100, 1);
 	negx.sampleImage(img, _x, _y, _w, _h, 2.0f * p->_srchwinsz,
-			(1.5f * p->_init_postrainrad), p->_init_negnumtrain);
+			(1.5f * p->_init_postrainrad), p->_init_negnumtrain, 2);
 	if (posx.size() < 1 || negx.size() < 1) {
 		fprintf(stderr, "samples not enough.");
 		return false;
@@ -54,14 +54,14 @@ double Tracker::update_location(Mat *img) {
 
 	static SampleSet detectx;
 	static arma::fvec confidence;
-	double resp;
+	double bestconf;
 
 	// detectx selects the location in which to calculate the classifier;
 	// considers all locations within a window around current state;
 	// _srchwinsz is the radius of this window
 	detectx.sampleImage(img, _x, _y, _w, _h, (float) _trparams->_srchwinsz, 0,
-			100);
-	fprintf(stderr, "sampleImage\n");
+			100, 0);
+	fprintf(stderr, "sample image\n");
 
 	// run current classifier (_clf) on search window
 
@@ -86,13 +86,15 @@ double Tracker::update_location(Mat *img) {
 //	}
 
 	unsigned int bestind;
-	resp = confidence.max(bestind);
+	bestconf = confidence.max(bestind);
 	_x = (float) detectx[bestind]._col;
 	_y = (float) detectx[bestind]._row;
 
+	fprintf(stderr, "best sample %d, confidence %f\n", bestind, bestconf) ;
+
 	// clean up
 	detectx.clear();
-	return resp;
+	return bestconf;
 }
 
 void Tracker::update_classifier(Mat *img) {
@@ -101,10 +103,10 @@ void Tracker::update_classifier(Mat *img) {
 	static SampleSet posx, negx;
 
 	// train location clf (negx are randomly selected from image, posx is just the current tracker location)
-	negx.sampleImage(img, _x, _y, _w, _h, (1.5f * _trparams->_srchwinsz),
-			_trparams->_posradtrain + 5, _trparams->_negnumtrain);
 	posx.sampleImage(img, _x, _y, _w, _h, _trparams->_posradtrain, 0,
-			_trparams->_posmaxtrain);
+			_trparams->_posmaxtrain, 1);
+	negx.sampleImage(img, _x, _y, _w, _h, (1.5f * _trparams->_srchwinsz),
+			_trparams->_posradtrain + 15, _trparams->_negnumtrain, 2);
 	_clf->update(posx, negx);
 
 	// clean up
