@@ -197,7 +197,7 @@ int getBBFromUser(Mat *img, Rect *bb) {
 	return 0;
 }
 
-void demo(char* images_path, int start_id) {
+void demo(char* images_path, int start_id, char* name_format) {
 	Tracker *tr[NUM_TRACKERS];
 	TrackerParams *trparams[NUM_TRACKERS];
 	ClfParams *clfparams[NUM_TRACKERS];
@@ -261,7 +261,7 @@ void demo(char* images_path, int start_id) {
 	for (;; ind++) {
 
 		ifn =
-				(sequencePath / path((boost::format("%d.jpg") % ind).str())).string();
+				(sequencePath / path((boost::format(name_format) % ind).str())).string();
 		frameRGB = imread(ifn, 1);
 		cvtColor(frameRGB, frame, COLOR_BGR2GRAY);
 //		resize(frame, frame_small, Size(frame.cols / 4, frame.rows / 4));
@@ -324,10 +324,10 @@ void demo(char* images_path, int start_id) {
 }
 
 int main(int argc, char * argv[]) {
-	if (argc != 3) {
-            cout << "usage: "<< argv[0] << " <images path> <start_frame>\n";
+	if (argc != 4) {
+            cout << "usage: "<< argv[0] << " <images path> <start_frame> <name_format>\n";
         } else {
-            demo(argv[1], atoi(argv[2]));
+            demo(argv[1], atoi(argv[2]), argv[3]);
         }
 }
 
