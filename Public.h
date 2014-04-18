@@ -28,12 +28,12 @@
 #include <list>
 #include <math.h>
 #include <sys/time.h>
-#include "ipp.h"
+//#include "ipp.h"
 
-#pragma comment(lib,"ippi.lib")
-#pragma comment(lib,"ippm.lib")
-#pragma comment(lib,"ippcore.lib")
-#pragma comment(lib,"ippcv.lib")
+//#pragma comment(lib,"ippi.lib")
+//#pragma comment(lib,"ippm.lib")
+//#pragma comment(lib,"ippcore.lib")
+//#pragma comment(lib,"ippcv.lib")
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -51,7 +51,7 @@
 //#pragma comment(lib,"cvaux.lib")
 //#pragma comment(lib,"cxts.lib")
 
-#include "omp.h"
+//#include "omp.h"
 #include "timer.h"
 
 using namespace std;
