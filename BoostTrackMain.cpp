@@ -163,6 +163,7 @@ int getBBFromUser(Mat *img, Rect *bb) {
 	bool dragging = false;
 
 	Mat imgrgb, vis;
+
 	cvtColor(*img, imgrgb, cv::COLOR_GRAY2BGR);
 
 	bb_done_struct bb_done;
@@ -233,9 +234,13 @@ void demo(char* images_path, int start_id, char* name_format) {
 
 	int ind = start_id;
 	string ifn =
-			(sequencePath / path((boost::format("%d.jpg") % ind).str())).string();
-        frameRGB = imread(ifn, 1);
-	cvtColor(frameRGB, frame, COLOR_BGR2GRAY);
+			(sequencePath / path((boost::format(name_format) % ind).str())).string();
+        frameRGB = imread(ifn, -1);
+	if (frameRGB.channels()  == 3) {
+	    	cvtColor(frameRGB, frame, COLOR_BGR2GRAY);
+	} else {
+		frameRGB.copyTo(frame);
+	}
 //	resize(frame, frame_small, Size(frame.cols / 4, frame.rows / 4));
 
 	Rect bb;
@@ -262,8 +267,14 @@ void demo(char* images_path, int start_id, char* name_format) {
 
 		ifn =
 				(sequencePath / path((boost::format(name_format) % ind).str())).string();
-		frameRGB = imread(ifn, 1);
+
+	frameRGB = imread(ifn, -1);
+	if (frameRGB.channels()  == 3) {
 		cvtColor(frameRGB, frame, COLOR_BGR2GRAY);
+	} else {
+		frameRGB.copyTo(frame);
+	}	
+
 //		resize(frame, frame_small, Size(frame.cols / 4, frame.rows / 4));
 
 		fprintf(stderr, "Frame %d\n", ind++);
