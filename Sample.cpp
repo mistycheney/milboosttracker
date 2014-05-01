@@ -47,6 +47,8 @@ void SampleSet::sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
 					integral(*(_samples[i]._img), *(_samples[i]._imgII));
 				}
 
+/* output positive/negative/predictive samples
+
 				if (flag>0) {
 					if (flag==1) {
 						imwrite((boost::format("pos/sample_pos_%d.jpg")%i).str(), roi);
@@ -56,6 +58,7 @@ void SampleSet::sampleImage(Mat *img, int x, int y, int w, int h, float inrad,
 				} else {
 					imwrite((boost::format("sample/sample_%d.jpg")%i).str(), roi);
 				}
+*/
 
 				i++;
 			}

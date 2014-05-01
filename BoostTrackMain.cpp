@@ -198,7 +198,7 @@ int getBBFromUser(Mat *img, Rect *bb) {
 	return 0;
 }
 
-void demo(char* images_path, int start_id, char* name_format) {
+void demo(char* images_path, int start_id, char* name_format, bool is_interactive) {
 	Tracker *tr[NUM_TRACKERS];
 	TrackerParams *trparams[NUM_TRACKERS];
 	ClfParams *clfparams[NUM_TRACKERS];
@@ -315,7 +315,12 @@ void demo(char* images_path, int start_id, char* name_format) {
 		}
 		imshow("Figure 1", vis);
 
-		char q = waitKey();
+		char q;
+		if (is_interactive) {
+			q = waitKey();
+		} else {
+			q = waitKey(1);
+		}
 		if (q == 'q')
 			break;
 		else if (q == 'r') {
@@ -335,10 +340,10 @@ void demo(char* images_path, int start_id, char* name_format) {
 }
 
 int main(int argc, char * argv[]) {
-	if (argc != 4) {
-            cout << "usage: "<< argv[0] << " <images path> <start_frame> <name_format>\n";
+	if (argc != 5) {
+            cout << "usage: "<< argv[0] << " <images path> <start_frame> <name_format> <is_interactive>\n";
         } else {
-            demo(argv[1], atoi(argv[2]), argv[3]);
+            demo(argv[1], atoi(argv[2]), argv[3], (bool)atoi(argv[4]));
         }
 }
 
